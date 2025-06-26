@@ -1,7 +1,7 @@
 ﻿/*
  * program.cs 
  * 
- * replicates the unix LC command
+ * replicates the unix DF command
  * 
  *  Date        Author          Description
  *  ====        ======          ===========
@@ -14,7 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace DFClone
+namespace DF
 {
     class Program
     {
@@ -25,6 +25,9 @@ namespace DFClone
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             EnableVirtualTerminal();
 
+            /*
+             * Parse command line arguments
+             */
             foreach (var arg in args)
             {
                 if (arg == "-x") useExact = true;
@@ -40,12 +43,23 @@ namespace DFClone
                 }
             }
 
+            /*
+             * Get all drives and print their information
+             */
             var drives = DriveInfo.GetDrives().Where(d => d.IsReady).ToList();
             PrintHeader();
             foreach (var drive in drives)
+            {
                 PrintDrive(drive);
-        }
+            }
 
+        } /* Main */
+
+        /*
+         * PrinteHader
+         * 
+         * Print header for the drive information table
+         */
         static void PrintHeader()
         {
             if (useExact)
@@ -58,8 +72,13 @@ namespace DFClone
                 Console.WriteLine("{0,-16}{1,12}{2,12}{3,12} {4,5}  {5}",
                     "Drive", "Total", "Used", "Free", "Use%", "Mount");
             }
-        }
+        } /* PrintHeader */
 
+        /*
+         * PrintDrive
+         * 
+         * Print information for a single drive
+         */
         static void PrintDrive(DriveInfo drive)
         {
             long total = drive.TotalSize;
@@ -90,8 +109,14 @@ namespace DFClone
             string mount = drive.RootDirectory.FullName.TrimEnd('\\');
 
             Console.WriteLine($"{driveLabel}{totalStr}{usedStr}{freeStr}  {percent}  {mount}");
-        }
 
+        } /* PrintDrive */
+
+        /*
+         * FormatSize
+         * 
+         * Format a size in bytes into a human-readable string with appropriate units
+         */
         static string FormatSize(long bytes)
         {
             string[] units = { "B", "KB", "MB", "GB", "TB" };
@@ -103,8 +128,13 @@ namespace DFClone
                 unit++;
             }
             return $"{size:0.##} {units[unit]}";
-        }
+        } /* FormatSize */
 
+        /*
+         * GetDriveColor
+         * 
+         * Get the ANSI color code for a drive type
+         */
         static string GetDriveColor(DriveType type)
         {
             return type switch
@@ -115,15 +145,34 @@ namespace DFClone
                 DriveType.Fixed => "\x1b[37m", // White
                 _ => "\x1b[2m",  // Dim
             };
-        }
+        } /* GetDriveColor */
 
+        /*
+         * GetUsageColor
+         * 
+         * Get the ANSI color code for usage percentage
+         */
         static string GetUsageColor(double pct)
         {
-            if (pct >= 80) return "\x1b[31m"; // Red
-            if (pct >= 50) return "\x1b[33m"; // Yellow
-            return "\x1b[32m";                // Green
-        }
+            if (pct >= 90) return "\x1b[31;1m";      // Dark Red
+            if (pct >= 80) return "\x1b[31m";        // Red
+            if (pct >= 70) return "\x1b[91m";        // Bright Red
+            if (pct >= 60) return "\x1b[38;5;208m";  // Orange
+            if (pct >= 50) return "\x1b[33m";        // Yellow
+            if (pct >= 40) return "\x1b[93m";        // Bright Yellow
+            if (pct >= 30) return "\x1b[36m";        // Cyan-green
+            if (pct >= 20) return "\x1b[2;32m";      // Dim Green
+            if (pct >= 10) return "\x1b[32m";        // Green
+            return "\x1b[92m";                       // Bright Green
 
+        } /* GetUsageColor */
+
+
+        /*
+         * ShowHelp
+         * 
+         * show help for the df command
+         */
         static void ShowHelp()
         {
             Console.WriteLine(
@@ -133,15 +182,21 @@ namespace DFClone
 
 All mounted and ready volumes are shown, including CD-ROM, removable, and network drives.
 Drive name is colored by type; usage percent is colored by fill level.");
-        }
+        } /*  ShowHelp */
 
+        /*
+         * EnableVirtualTerminal
+         * 
+         * Enable virtual terminal processing for ANSI escape codes in Windows console
+         */
         static void EnableVirtualTerminal()
         {
             const int STD_OUTPUT_HANDLE = -11;
             var handle = GetStdHandle(STD_OUTPUT_HANDLE);
             GetConsoleMode(handle, out int mode);
             SetConsoleMode(handle, mode | 0x0004); // ENABLE_VIRTUAL_TERMINAL_PROCESSING
-        }
+
+        } /* EnableVirtualTerminal */
 
         [DllImport("kernel32.dll")] static extern IntPtr GetStdHandle(int nStdHandle);
         [DllImport("kernel32.dll")] static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int lpMode);
